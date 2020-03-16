@@ -1,0 +1,224 @@
+locus	gene	ProteinID	subsystem	Kamp.et.al.	Chao.et.al.	Cameron.et.al.	E.coli
+VC0158	murI	glutamate racemase	cell wall biosynthesis	E	E	E	E
+VC0215	coaBC	bifunctional phosphopantothenoylcysteine decarboxylase/phosphopantothenate synthase	coenzyme A biosynthesis; Cofactor biosynthesis	E	E	E	E
+VC0222	coaD	phosphopantetheine adenylyltransferase	coenzyme A biosynthesis; Cofactor biosynthesis	E	E	E	E
+VC0295	accC	acetyl-CoA carboxylase biotin carboxylase subunit	malonyl-CoA biosynthesis; lipid metabolism	E	E	E	E
+VC0315	pssA	phosphatidylserine synthase	lipid metabolism	E	E	E	E
+VC0318	murB	UDP-N-acetylenolpyruvoylglucosamine reductase	cell wall biosynthesis	E	E	E	E
+VC0440	folA	dihydrofolate reductase	tetrahydrofolate biosynthesis; cofactor biosynthesis	E	E	E	E
+VC0472	metK	S-adenosylmethionine synthetase	S-adenosyl-L-methionine biosynthesis; amino-acid biosynthesis	E	E	E	E
+VC0524	folB	"dihydroneopterin aldolase FolB, putative"	tetrahydrofolate biosynthesis; cofactor biosynthesis	E	E	E	E
+VC0528	ispD	2-C-methyl-D-erythritol 4-phosphate cytidylyltransferase	isoprenoid biosynthesis	E	E	E	E
+VC0529	ispF	"2-C-methyl-D-erythritol 2,4-cyclodiphosphate synthase"	isoprenoid biosynthesis	E	E	E	E
+VC0680	murJ	Probable lipid II flippase MurJ	cell wall biosynthesis	E	E	E	E
+VC0681	ribF	bifunctional riboflavin kinase/FMN adenylyltransferase	FAD biosynthesis; cofactor bisosynthesis	E	E	E	E
+VC0685	ispH	4-hydroxy-3-methylbut-2-enyl diphosphate reductase	isoprenoid biosynthesis	E	E	E	E
+VC0759	ispG	4-hydroxy-3-methylbut-2-en-1-yl diphosphate synthase	isoprenoid biosynthesis	E	E	E	E
+VC0853	ppnK	NAD kinase	NAD metabolic process	E	E	E	E
+VC0890	ispA	geranyl transtransferase	isoprenoid biosynthesis	E	E	E	E
+VC0986	adk	adenylate kinase	purine metabolism	E	E	E	E
+VC0987	hemH	ferrochelatase	protoheme biosynthesis; Porphyrin-containing compound metabolism	E	E	E	E
+VC1000	accD	acetyl-CoA carboxylase subunit beta	malonyl-CoA biosynthesis; lipid metabolism	E	E	E	E
+VC1001	folC	folylpolyglutamate synthase/dihydrofolate synthase		E	E	E	E
+VC1483	fabA	3-hydroxydecanoyl-(acyl carrier protein) dehydratase	lipid metabolism	E	E	E	E
+VC1850	lpxH	"UDP-2,3-diacylglucosamine hydrolase"	lipid IV(A) biosynthesis; Glycolipid biosynthesis	E	E	E	E
+VC1877	lpxK	tetraacyldisaccharide 4'-kinase	lipid IV(A) biosynthesis; Glycolipid biosynthesis	E	E	E	E
+VC1878	msbA	lipid transporter ATP-binding/permease protein	lipid IV(A) biosynthesis; Glycolipid biosynthesis	E	E	E	E
+VC2016	tmk	thymidylate kinase	dTTP biosynthesis; pyrimidine metabolism	E	E	E	E
+VC2020	acpP	acyl carrier protein	fatty acid biosynthesis; lipid metabolism	E	E	E	E
+VC2021	fabG	3-ketoacyl-(acyl-carrier-protein) reductase	fatty acid biosynthesis; lipid metabolism	E	E	E	E
+VC2022	fabD	Malonyl CoA-acyl carrier protein transacylase	fatty acid biosynthesis; lipid metabolism	E	E	E	E
+VC2152	dapE	succinyl-diaminopimelate desuccinylase	biosynthesis of lysine and meso-diaminopimelic acid; cell wall biosynthesis	E	E	E	E
+VC2182	ispE	4-diphosphocytidyl-2-C-methyl-D-erythritol kinase	isoprenoid biosynthesis	E	E	E	E
+VC2244	accA	acetyl-CoA carboxylase carboxyltransferase subunit alpha	malonyl-CoA biosynthesis; lipid metabolism	E	E	E	E
+VC2248	glmU	UDP-N-acetylglucosamine acyltransferase	UDP-N-acetyl-alpha-D-glucosamine biosynthesis; Nucleotide-sugar biosynthesis	E	E	E	E
+VC2254	dxr	1-deoxy-D-xylulose 5-phosphate reductoisomerase	isoprenoid biosynthesis	E	E	E	E
+VC2256	uppS	undecaprenyl diphosphate synthase	lipid metabolism	E	E	E	E
+VC2396	lpxC	UDP-3-O-[3-hydroxymyristoyl] N-acetylglucosamine deacetylase	lipid IV(A) biosynthesis; Glycolipid biosynthesis	E	E	E	E
+VC2401	murG	UDP-N-acetylglucosamine--N-acetylmuramyl-(pentapeptide) pyrophosphoryl-undecaprenol N-acetylglucosamine transferase	cell wall biosynthesis	E	E	E	E
+VC2403	murD	UDP-N-acetylmuramoylalanine--D-glutamate ligase	cell wall biosynthesis	E	E	E	E
+VC2404	mraY	phospho-N-acetylmuramoyl-pentapeptide- transferase	cell wall biosynthesis	E	E	E	E
+VC2405	murF	"UDP-N-acetylmuramoylalanyl-D-glutamyl-2, 6-diaminopimelate--D-alanyl-D-alanyl ligase"	cell wall biosynthesis	E	E	E	E
+VC2427	coaE	dephospho-CoA kinase	coenzyme A biosynthesis; Cofactor biosynthesis	E	E	E	E
+VC2500		hypothetical protein	lipopolysaccharide transport	E	E	E	E
+VC2514	murA	UDP-N-acetylglucosamine 1-carboxyvinyltransferase	cell wall biosynthesis	E	E	E	E
+VC2528		"ABC transporter, ATP-binding protein"		E	E	E	E
+VC2651	gpsA	NAD(P)H-dependent glycerol-3-phosphate dehydrogenase	glycerophospholipid metabolism; Membrane lipid metabolism	E	E	E	E
+VC2762	glmU	bifunctional N-acetylglucosamine-1-phosphate uridyltransferase/glucosamine-1-phosphate acetyltransferase	lipid A biosynthesis; Glycolipid biosynthesis	E	E	E	E
+VCA0207	nadE	NH(3)-dependent NAD(+) synthetase	NAD metabolic process; cofactor biosynthesis	E	E	E	E
+VC1126	purB	adenylosuccinate lyase	purine metabolism	E	E	E	 
+VC2602	purA	adenylosuccinate synthetase	de novo pathway of purine nucleotide biosynthesis; Purine metabolism	E	E	E	 
+VC0332	hemE	uroporphyrinogen decarboxylase	Porphyrin-containing compound metabolism	E	E	E	 
+VC0444	pdxA	4-hydroxythreonine-4-phosphate dehydrogenase	pyridoxine 5'-phosphate biosynthesis; cofactor biosynthesis	E	E	E	 
+VC0592	panB	3-methyl-2-oxobutanoate hydroxymethyltransferase	(R)-pantothenate biosynthesis; cofactor biosynthesis	E	E	E	 
+VC0638	folP1	dihydropteroate synthase	tetrahydrofolate biosynthesis; cofactor biosynthesis	E	E	E	 
+VC0675	thyA	thymidylate synthase	dTTP biosynthesis; pyrimidine metabolism	E	E	E	 
+VC0748	iscS	cysteine desulfurase	iron-sulfur cluster biosynthesis; cofactor biosynthesis	E	E	E	 
+VC1159	serC	phosphoserine aminotransferase	L-serine biosynthesis; amino-acid biosynthesis	E	E	E	 
+VC2329	dapD	"2,3,4,5-tetrahydropyridine-2-carboxylate N-succinyltransferase"	 L-lysine biosynthesis via DAP pathway; amin-acid biosynthesis	E	E	E	 
+VC0477	pgk	phosphoglycerate kinase	Glycolysis; Carbohydrate degradation	E	E	E	E
+VC2767	atpH	F0F1 ATP synthase subunit delta		E	E	E	  
+VC2765	atpG	F0F1 ATP synthase subunit gamma		E	E	E	 
+VC2766	atpA	F0F1 ATP synthase subunit alpha		E	E	E	 
+VC2768	atpF	F0F1 ATP synthase subunit B		E	E	E	 
+VC2769	atpE	F0F1 ATP synthase subunit C		E	E	E	 
+VC0478	fbaA	fructose-bisphosphate aldolase	Glycolysis; Carbohydrate degradation	E	E	E	E
+VC1255	nrdB	ribonucleotide-diphosphate reductase subunit beta	DNA replicaction	E	E	E	E
+VC1256		ribonucleotide-diphosphate reductase subunit alpha	DNA replicaction	E	E	E	E
+VC1916	cmk	cytidylate kinase		E	E	E	 
+VC2258	pyrH	uridylate kinase	CTP biosynthesis via de novo pathway; Pyrimidine metabolism	E	E	E	E
+VC0319	birA	biotin--protein ligase	biotin biosynthesis	E	E	E	E
+VC0954	lptE	rare lipoprotein B	lipopolysaccharide transport	E	E	E	E
+VC0971	ligA	NAD-dependent DNA ligase LigA	DNA replicaction	E	E	E	E
+VC2099		flavodoxin FldA		E	E	E	E
+VC2249	fabZ	(3R)-hydroxymyristoyl-ACP dehydratase	fatty acid biosynthesis; lipid metabolism	E	E	E	E
+VC2255	cdsA	phosphatidate cytidylyltransferase	phospholipid metabolism; lipid metabolism	E	E	E	E
+VC2545	ppa	inorganic pyrophosphatase		E	E	E	E
+VC0227	kdkA	3-deoxy-D-manno-octulosonic-acid kinase	lipid IV(A) biosynthesis; Glycolipid biosynthesis	E	E	E	 
+VC0372	alr1	alanine racemase	D-alanine biosynthesis; amino-acid biosynthesis	E	E	E	 
+VC0664	lysS	lysyl-tRNA synthetase		E	E	E	 
+VC0749	iscU	Iron-sulfur cluster assembly scaffold protein	iron-sulfur cluster biosynthesis; cofactor biosynthesis	E	E	E	 
+VC0750	iscA	Iron-binding protein 	iron-sulfur cluster biosynthesis; cofactor biosynthesis	E	E	E	 
+VC0004		putative inner membrane protein translocase component YidC		E	E	E	E
+VC0007	rpmH	50S ribosomal protein L34		E	E	E	E
+VC0012	dnaA	chromosomal replication initiation protein		E	E	E	E
+VC0020	glyS	glycyl-tRNA synthetase subunit beta		E	E	E	E
+VC0147		cell division protein FtsY		E	E	E	E
+VC0150		RNA polymerase factor sigma-32		E	E	E	E
+VC0326	rplJ	50S ribosomal protein L10		E	E	E	E
+VC0327	rplL	50S ribosomal protein L7/L12		E	E	E	E
+VC0328	rpoB	DNA-directed RNA polymerase subunit beta		E	E	E	E
+VC0329		DNA-directed RNA polymerase subunit beta'		E	E	E	E
+VC0359	rpsL	30S ribosomal protein S12		E	E	E	E
+VC0360		30S ribosomal protein S7		E	E	E	E
+VC0368	rpsR	30S ribosomal protein S18		E	E	E	E
+VC0371		replicative DNA helicase		E	E	E	E
+VC0397		single-strand DNA-binding protein		E	E	E	E
+VC0415		rod shape-determining protein MreB		E	E	E	E
+VC0417		rod shape-determining protein MreD		E	E	E	E
+VC0435	rplU	50S ribosomal protein L21		E	E	E	E
+VC0436	rpmA	50S ribosomal protein L27		E	E	E	E
+VC0466		Holliday junction resolvase-like protein		E	E	E	E
+VC0517		RNA polymerase sigma factor RpoD		E	E	E	E
+VC0527	ftsB	cell division protein FtsB		E	E	E	E
+VC0545	alaS	alanyl-tRNA synthetase		E	E	E	E
+VC0560		signal recognition particle protein		E	E	E	E
+VC0561	rpsP	30S ribosomal protein S16		E	E	E	E
+VC0563	trmD	tRNA (guanine-N(1)-)-methyltransferase		E	E	E	E
+VC0564	rplS	50S ribosomal protein L19		E	E	E	E
+VC0218		ribosomal protein L28		E	E	E	E
+VC0307	rho	transcription termination factor Rho		E	E	E	E
+VC0627		iron-sulfur cluster insertion protein ErpA		E	E	E	E
+VC0637		cell division protein FtsH		E	E	E	E
+VC0643	infB	translation initiation factor IF-2		E	E	E	E
+VC0674		prolipoprotein diacylglyceryl transferase		E	E	E	E
+VC0682	ileS	isoleucyl-tRNA synthetase		E	E	E	E
+VC0854		heat shock protein GrpE		E	E	E	E
+VC0875		prolyl-tRNA synthetase		E	E	E	E
+VC0949		rod shape-determining protein RodA		E	E	E	E
+VC0997		glutaminyl-tRNA synthetase		E	E	E	E
+VC1054		DNA polymerase III subunits gamma and tau		E	E	E	E
+VC1107	lolA	outer-membrane lipoprotein carrier protein		E	E	E	E
+VC1110		seryl-tRNA synthetase		E	E	E	E
+VC1166	aspS	aspartyl-tRNA synthetase		E	E	E	E
+VC1219	pheS	phenylalanyl-tRNA synthetase subunit alpha		E	E	E	E
+VC1220	pheT	phenylalanyl-tRNA synthetase subunit beta		E	E	E	E
+VC1258		"DNA gyrase, subunit A"		E	E	E	E
+VC1297	asnC	asparaginyl-tRNA synthetase		E	E	E	E
+VC1737	infA	translation initiation factor IF-1		E	E	E	E
+VC1882		outer membrane-specific lipoprotein transporter subunit LolE		E	E	E	E
+VC1883		"ABC transporter, ATP-binding protein"		E	E	E	E
+VC1884		hypothetical protein		E	E	E	E
+VC1989		hypothetical protein		E	E	E	E
+VC2015		DNA polymerase III subunit delta'		E	E	E	E
+VC2181	lolB	outer membrane lipoprotein LolB		E	E	E	E
+VC2214	gltX	glutamyl-tRNA synthetase		E	E	E	E
+VC2242		mesJ protein		E	E	E	E
+VC2245	dnaE	DNA polymerase III subunit alpha		E	E	E	E
+VC2252		outer membrane protein assembly factor YaeT		E	E	E	E
+VC2253		hypothetical protein		E	E	E	E
+VC2259	tsf	elongation factor Ts		E	E	E	E
+VC2260	rpsB	30S ribosomal protein S2		E	E	E	E
+VC2261		methionine aminopeptidase		E	E	E	E
+VC2397		cell division protein FtsZ		E	E	E	E
+VC2398	ftsA	cell division protein FtsA		E	E	E	E
+VC2399		cell division protein FtsQ		E	E	E	E
+VC2402		cell division protein FtsW		E	E	E	E
+VC2408		cell division protein FtsL		E	E	E	E
+VC2430		DNA topoisomerase IV subunit A		E	E	E	E
+VC2431		DNA topoisomerase IV subunit B		E	E	E	E
+VC2503	valS	valyl-tRNA synthetase		E	E	E	E
+VC2570	rplQ	50S ribosomal protein L17		E	E	E	E
+VC2571		DNA-directed RNA polymerase subunit alpha		E	E	E	E
+VC2572	rpsD	30S ribosomal protein S4		E	E	E	E
+VC2573		30S ribosomal protein S11		E	E	E	E
+VC2574	rpsM	30S ribosomal protein S13		E	E	E	E
+VC2576	secY	preprotein translocase subunit SecY		E	E	E	E
+VC2577	rplO	50S ribosomal protein L15		E	E	E	E
+VC2578	rpmD	50S ribosomal protein L30		E	E	E	E
+VC2579	rpsE	30S ribosomal protein S5		E	E	E	E
+VC2580	rplR	50S ribosomal protein L18		E	E	E	E
+VC2581	rplF	50S ribosomal protein L6		E	E	E	E
+VC2582	rpsH	30S ribosomal protein S8		E	E	E	E
+VC2583	rpsN	30S ribosomal protein S14		E	E	E	E
+VC2584	rplE	50S ribosomal protein L5		E	E	E	E
+VC2585	rplX	50S ribosomal protein L24		E	E	E	E
+VC2586	rplN	50S ribosomal protein L14		E	E	E	E
+VC2587	rpsQ	30S ribosomal protein S17		E	E	E	E
+VC2588	rpmC	50S ribosomal protein L29		E	E	E	E
+VC2589	rplP	50S ribosomal protein L16		E	E	E	E
+VC2590	rpsC	30S ribosomal protein S3		E	E	E	E
+VC2591	rplV	50S ribosomal protein L22		E	E	E	E
+VC2592	rpsS	30S ribosomal protein S19		E	E	E	E
+VC2593	rplB	50S ribosomal protein L2		E	E	E	E
+VC2594	rplW	50S ribosomal protein L23		E	E	E	E
+VC2595	rplD	50S ribosomal protein L4		E	E	E	E
+VC2596	rplC	50S ribosomal protein L3		E	E	E	E
+VC2597	rpsJ	30S ribosomal protein S10		E	E	E	E
+VCA0287		threonyl-tRNA synthetase		E	E	E	E
+VCA0288	infC	initiation factor IF3		E	E	E	E
+VCA0290	rplT	50S ribosomal protein L20		E	E	E	E
+VC1246		hypothetical protein		E	E	E	 
+VC0024		cell developmental protein SirA		E	E	E	 
+VC0084		hypothetical protein		E	E	E	 
+VC0324	rplK	50S ribosomal protein L11		E	E	E	 
+VC0325	rplA	50S ribosomal protein L1		E	E	E	 
+VC0356		hypothetical protein		E	E	E	 
+VC0357		hypothetical protein		E	E	E	 
+VC0358		hypothetical protein		E	E	E	 
+VC0366	rpsF	30S ribosomal protein S6		E	E	E	 
+VC0367		primosomal replication protein N		E	E	E	 
+VC0443	ksgA	dimethyladenosine transferase		E	E	E	 
+VC0445		survival protein SurA		E	E	E	 
+VC0519		hypothetical protein		E	E	E	 
+VC0520	rpsU	30S ribosomal protein S21		E	E	E	 
+VC0521	gcp	O-sialoglycoprotein endopeptidase		E	E	E	 
+VC0562	rimM	16S rRNA-processing protein		E	E	E	 
+VC0631		tyrosyl-tRNA synthetase		E	E	E	 
+VC0679	rpsT	30S ribosomal protein S20		E	E	E	 
+VC0751	hscB	co-chaperone HscB		E	E	E	 
+VC0945		hypothetical protein		E	E	E	 
+VC1013		electron transport complex protein RnfG		E	E	E	 
+VC1192		hypothetical protein		E	E	E	 
+VC1485		hypothetical protein		E	E	E	 
+VC1738		hypothetical protein		E	E	E	 
+VC1739		hypothetical protein		E	E	E	 
+VC1803		hypothetical protein		E	E	E	 
+VC1912		hypothetical protein		E	E	E	 
+VC1913		hypothetical protein		E	E	E	 
+VC1954		hypothetical protein		E	E	E	 
+VC2096		replication initiation regulator SeqA		E	E	E	 
+VC2109				E	E	E	 
+VC2409	mraW	S-adenosyl-methyltransferase MraW		E	E	E	 
+VC2733				E	E	E	 
+VCA0289	rpmI	50S ribosomal protein L35		E	E	E	 
+VCA0392		"antidote protein, putative"		E	E	E	 
+VCA0528	rbgA	ribosomal biogenesis GTPase		E	E	E	 
+VCA0701		hypothetical protein		E	E	E	 
+VCA0786		hypothetical protein		E	E	E	 
+VCA1115		ParA family protein		E	E	E	 
+VC0015	gyrB	DNA gyrase subunit B		E	E	E	
+VC2034		hypothetical protein		E	E	E	
+VC2575	rpmJ	50S ribosomal protein L36		E	E	E	
+VCA0383		hypothetical protein		E	E	E	
+VCA0626		hypothetical protein		E	E	E	
