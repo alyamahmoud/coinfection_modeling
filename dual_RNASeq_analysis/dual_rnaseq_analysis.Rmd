@@ -1,0 +1,712 @@
+---
+title: "dual rnaseq analysis, enterics paper"
+author: "am"
+date: "November 16th, 2018"
+output: html_document
+---
+```{r}
+library (DESeq2)
+library (tidyr)
+library (dplyr)
+library (GOstats)
+library (devtools)
+library (RSQLite) 
+library(GSEABase)
+library(plyr)
+library(data.table)
+library (GOplot)
+library (RColorBrewer)
+library (pheatmap)
+```
+
+
+```{r}
+# VCH vs VCH+e36 merged
+# counts merged at the FIGfam.ID level
+rm (list = ls())
+#VCH
+setwd('~/Documents/vibrio_etec/February_2017/bowtie_htseq/bowtie2_htseq_no_insert/')
+counts_vch_1 = read.delim ('vch_rep_1_counts', header = FALSE);colnames(counts_vch_1) = c('gene_id', 'vch_rep_1')
+counts_vch_2 = read.delim ('vch_rep_2_counts', header = FALSE);colnames(counts_vch_2) = c('gene_id', 'vch_rep_2')
+counts_vch_3 = read.delim ('vch_rep_3_counts', header = FALSE); colnames(counts_vch_3) = c('gene_id', 'vch_rep_3')
+counts_vch = merge (counts_vch_1, counts_vch_2, by = 'gene_id'); counts_vch = merge (counts_vch, counts_vch_3, by = 'gene_id')
+annotation_vch = read.delim ('../VCH_243277_158_PATRIC_genome_feature.txt', header = TRUE)
+# FIGfam.ID;PATRIC.genus.specific.families..PLfams.;PATRIC.cross.genus.families..PGfams.; Product
+colnames(counts_vch)[1] = c('PATRIC.ID'); annotation_vch = annotation_vch[annotation_vch$Feature.Type == 'CDS', ]
+dat_vch = merge (counts_vch, annotation_vch, by = 'PATRIC.ID', all = TRUE)
+#keep = c('PATRIC.ID', 'vch_rep_1', 'vch_rep_2', 'vch_rep_3', 'FIGfam.ID', 'Product')
+keep = c('vch_rep_1', 'vch_rep_2', 'vch_rep_3', 'FIGfam.ID')
+dat_vch = dat_vch[, colnames(dat_vch) %in% keep]; dat_vch = na.omit(dat_vch);dat_vch = dat_vch[!dat_vch$FIGfam.ID == "", ]
+
+# VCH+e36
+setwd('~/Documents/vibrio_etec/February_2017/bowtie_htseq/bowtie2_htseq_no_insert/')
+counts_vch_e36_1 = read.delim ('vch_and_e36_merged_rep_1_counts', header = FALSE);colnames(counts_vch_e36_1) = c('gene_id', 'vch_e36_rep_1')
+counts_vch_e36_2 = read.delim ('vch_and_e36_merged_rep_2_counts', header = FALSE);colnames(counts_vch_e36_2) = c('gene_id', 'vch_e36_rep_2')
+counts_vch_e36_3 = read.delim ('vch_and_e36_merged_rep_3_counts', header = FALSE);colnames(counts_vch_e36_3) = c('gene_id', 'vch_e36_rep_3')
+counts_vch_e36 = merge (counts_vch_e36_1, counts_vch_e36_2, by = 'gene_id'); counts_vch_e36 = merge (counts_vch_e36, counts_vch_e36_3, by = 'gene_id');
+annotation_vch_e36 = read.delim ('../merged_VCH_E36_gamma_proteobacteria_PATRIC_genome_feature.txt', header = TRUE);
+# FIGfam.ID;PATRIC.genus.specific.families..PLfams.;PATRIC.cross.genus.families..PGfams.; Product
+colnames(counts_vch_e36)[1] = c('PATRIC.ID'); annotation_vch_e36 = annotation_vch_e36[annotation_vch_e36$Feature.Type == 'CDS', ]
+dat_vch_e36 = merge (counts_vch_e36, annotation_vch_e36, by = 'PATRIC.ID', all = TRUE)
+#keep = c('PATRIC.ID', 'vch_rep_1', 'vch_rep_2', 'vch_rep_3', 'FIGfam.ID', 'Product')
+keep = c('vch_e36_rep_1', 'vch_e36_rep_2', 'vch_e36_rep_3', 'FIGfam.ID')
+dat_vch_e36 = dat_vch_e36[, colnames(dat_vch_e36) %in% keep]; dat_vch_e36 = na.omit(dat_vch_e36); dat_vch_e36 = dat_vch_e36[!dat_vch_e36$FIGfam.ID == "", ]
+
+# merge counts from the two conditions
+df = NULL; df = merge (dat_vch, dat_vch_e36, by = 'FIGfam.ID'); df[is.na(df)] <- 0;
+library (data.table)
+adf = NULL;
+df = cbind (df, row_sums= rowSums(df[,2:7]))
+adf = as.data.table(df)
+df = setDT(adf)[, .SD[which.max(row_sums)], by=FIGfam.ID]; df = df[,-8]
+# for transcripts for which there are double hits, take the one with higher percent identity and lower evalue and lower number of gaps -- in most cases these mapped to the same symbol -- so its safe to just discard duplicates
+
+vch_vs_vch_e36_counts = df;
+df = NULL; df = data.frame(vch_vs_vch_e36_counts)
+rownames(df) = df[, 1]; df = df[,-1]; df[is.na(df)] <- 0;
+counts_table = df;
+exp_design = data.frame(row.names = colnames(counts_table), condition = c(rep ('monoculture', 3), rep ('coculture', 3)))
+conds = exp_design$condition
+library(DESeq2)
+ddsFullCountTable <- DESeqDataSetFromMatrix(countData = counts_table, colData = exp_design, design = ~condition)
+dds = NULL; dds = ddsFullCountTable
+dds$condition = relevel (dds$condition, ref = 'coculture')
+# estimates size factors to account for differences in sequencing depth
+dds <- estimateSizeFactors( dds )
+sizeFactors(dds)
+
+#One can instead use the gene-wise estimates as final estimates:
+#  dds <- estimateDispersionsGeneEst(dds)
+#  dispersions(dds) <- mcols(dds)$dispGeneEst
+#  ...then continue with testing using nbinomWaldTest or nbinomLRT
+#vsd <- varianceStabilizingTransformation (dds, fitType = 'mean')
+rld <- rlog( dds )
+# PCA
+#plotPCA(rld, intgroup = 'condition', returnData = TRUE)
+#pdf ('~/Documents/Projects_macbook/Vibrio-ETEC/February_2017/manuscript_draft_August_2017/dual_rnaseq/vch_vs_vch_e36.pdf')
+plotPCA (rld, intgroup = 'condition')
+# sample-to-sample distance
+sampleDists = dist(t(assay(rld)), method = "maximum")
+sampleDistMatrix = as.matrix(sampleDists)
+#rownames(sampleDistMatrix) = paste(rld$condition)
+#colnames (sampleDistMatrix) = NULL
+colors = colorRampPalette(rev(brewer.pal(9, 'Blues'))) (255)
+pheatmap(sampleDistMatrix, clustering_distance_rows = sampleDists, clustering_distance_cols = sampleDists, col = colors, clustering_method = 'average')
+ddsFullCountTable <- DESeqDataSetFromMatrix(countData = counts_table, colData = exp_design, design = ~ condition)
+dds = ddsFullCountTable
+colData(dds)$condition <- relevel(colData(dds)$condition, "coculture")
+levels(colData(dds)$monoculture)
+
+dds = dds[rowSums(counts(dds)) > 1, ]
+design(dds) <- ~ condition
+dds <- DESeq( dds )
+res_vch = NULL;
+res_vch <- results( dds , contrast = c('condition', 'monoculture', 'coculture'))
+summary(res_vch, na.rm = TRUE)
+sum(!is.na(res_vch$padj))
+
+plotMA(res_vch, main = 'DESeq2', ylim = c(-2,2))
+
+#pdf ('~/Documents/Projects_macbook/Vibrio-ETEC/February_2017/manuscript_draft_August_2017/dual_rnaseq/vch_vs_vch_e36.pdf')
+plotPCA (rld, intgroup = 'condition')
+plotMA(res_vch, main = 'DESeq2', ylim = c(-2,2))
+pheatmap(sampleDistMatrix, clustering_distance_rows = sampleDists, clustering_distance_cols = sampleDists, col = colors, annotation_col = exp_design)
+#dev.off()
+
+# merge DEG results and annotation, functional annotation results in one table for export
+# res + PATRIC annotation
+res_vch = data.frame(res_vch); res_vch = cbind (rownames(res_vch), res_vch); rownames(res_vch) = NULL; colnames(res_vch)[1] = c('FIGfam.ID'); res_vch = data.frame(res_vch); deg_VCH_vs_VCH_co_cultured_with_e36  = merge (res_vch, annotation_vch, by = 'FIGfam.ID');
+# res + PATRIC annotation + eggNOG annotation
+eggNOG_vch = NULL; eggNOG_vch = read.delim ('~/Documents/vibrio_etec/February_2017/bowtie_htseq/eggNOG_priotrize_precision_diamond/VCH_243277_158_ptns.fasta.emapper.annotations', header = FALSE, stringsAsFactors = FALSE); colnames(eggNOG_vch) = c('PATRIC.ID', 'seed_ortholog', 'blast_evalue', 'eggNOG_score', 'eggNOG_predicted_name', 'GO_terms', 'KEGG_pw', 'tax_scope', 'eggNOG_OGs', 'best_OG', 'COG_category', 'eggNOG_HMM_description')
+deg_VCH_vs_VCH_co_cultured_with_e36 = merge (deg_VCH_vs_VCH_co_cultured_with_e36, eggNOG_vch, by = 'PATRIC.ID')
+
+remove = c('Feature.ID', 'RefSeq.Locus.Tag', 'Alt.Locus.Tag', 'Accession', 'Protein.ID', 'Gene.Symbol', 'COG_category', 'eggNOG_HMM_description', 'best_OG');deg_VCH_vs_VCH_co_cultured_with_e36 = deg_VCH_vs_VCH_co_cultured_with_e36[, !colnames(deg_VCH_vs_VCH_co_cultured_with_e36) %in% remove];
+#write.table (deg_VCH_vs_VCH_co_cultured_with_e36, file = '~/Documents/vibrio_etec/nature_metabolism_am01/supp_material/vch_vs_vch_e36.txt', sep = '\t', quote = FALSE, row.names = FALSE)
+
+# checks
+up_monoculture_vs_coculture = deg_VCH_vs_VCH_co_cultured_with_e36[deg_VCH_vs_VCH_co_cultured_with_e36$padj < 0.1 & deg_VCH_vs_VCH_co_cultured_with_e36$log2FoldChange >1, ]; length (unique(na.omit(up_monoculture_vs_coculture$FIGfam.ID)))
+down_monoculture_vs_coculture = deg_VCH_vs_VCH_co_cultured_with_e36[deg_VCH_vs_VCH_co_cultured_with_e36$padj < 0.1 & deg_VCH_vs_VCH_co_cultured_with_e36$log2FoldChange < -1, ]; length (unique(na.omit(down_monoculture_vs_coculture$FIGfam.ID)))
+deg_genes = rbind (up_monoculture_vs_coculture, down_monoculture_vs_coculture)
+
+
+# for heatmap
+deg = rbind (up_monoculture_vs_coculture, down_monoculture_vs_coculture)
+keep = c('Product', 'FIGfam.ID')
+deg = deg[, keep]
+df = assay (rld)
+df = df[deg$FIGfam.ID, ]; df = na.omit(df) # 711 6
+#pdf('~/Documents/Projects_macbook/Vibrio-ETEC/February_2017/manuscript_draft_August_2017/dual_rnaseq/deg_heatmap.pdf')
+pheatmap (df, annotation_col = exp_design)
+#dev.off()
+```
+
+```{r}
+# GO enrichment -- this chunk was done on my workstation because the summary (Over) from topGO/GOstats is incompatible with the version of R on my macbook
+# http://www.bioconductor.org/packages/release/bioc/vignettes/GOstats/inst/doc/GOstatsForUnsupportedOrganisms.pdf
+# VCH, VCH+E36
+dat = deg_VCH_vs_VCH_co_cultured_with_e36; dat = dat[, c('FIGfam.ID', 'GO_terms')]; dat = dat[!dat$GO_terms == "", ]
+go_vch = dat %>%
+    mutate(GO_terms = strsplit(as.character(GO_terms), "\\,")) %>%
+    unnest(GO_terms)
+# prepare input for GOstats
+# frame.go_id frame.Evidence frame.gene_id
+go_vch = cbind (go_vch, frame.Evidence = rep ('IEA', length (go_vch$FIGfam.ID)))
+goframeData = NULL; goframeData = cbind (go_vch$GO_terms, as.character(go_vch$frame.Evidence)); goframeData = cbind (goframeData, as.character(go_vch$FIGfam.ID)); colnames(goframeData) = c('frame.go_id', 'frame.Evidence', 'frame.gene_id'); goframeData = data.frame(goframeData)
+goFrame=GOFrame(goframeData,organism="Vibrio cholerae")
+goAllFrame=GOAllFrame(goFrame)
+
+gsc <- GeneSetCollection(goAllFrame, setType = GOCollection())
+
+# perform GSEA
+# universe = goframeData$frame.gene_id;universe = as.character(universe)
+universe = as.character(unique (deg_VCH_vs_VCH_co_cultured_with_e36$FIGfam.ID))
+deg_genes = union (up_monoculture_vs_coculture$FIGfam.ID, down_monoculture_vs_coculture$FIGfam.ID)
+genes = unique(deg_genes); genes = as.character(genes)
+
+params <- GSEAGOHyperGParams(name="My Custom GSEA based annot Params",
+                              geneSetCollection=gsc,
+                              geneIds = genes,
+                              universeGeneIds = universe,
+                              ontology = "BP",
+                              pvalueCutoff = 0.1,
+                              conditional = FALSE,
+                              testDirection = "over")
+Over <- hyperGTest(params)
+summary(Over)
+```
+
+```{r}
+# use GOplot
+df1 = do.call(rbind, geneIdsByCategory(Over))
+df1 = ldply(apply(df1, 1, function(x) data.frame(
+                      x = paste(x[1:274],sep=",",collapse=",")))) # dim(df1)[2] = 274
+colnames(df1) = c('GOBPID', 'Genes');
+df2 = summary(Over)
+dat = NULL; dat = merge (df1, df2)
+dat = cbind (dat, Category = rep ('BP', length (dat$GOBPID)))
+colnames(dat)  [1] = 'ID'
+colnames(dat)[3] = 'adj_pval'; # this is not adjusted p value, not adjustment is made on GOstats p value output due to lack of independence between GO terms and gene expression values, controversial issue justified by using this as motivation for downstream analysis/to be validated by downstream analysis
+keep = c('Category', 'ID', 'Term', 'Genes', 'adj_pval');
+dat = dat[, keep]
+goplot_dat = dat; 
+goplot_dat = goplot_dat[order(goplot_dat$adj_pval, decreasing = FALSE), ]
+colnames(res_vch) = c('ID', 'baseMean', 'logFC', 'lfcSE', 'stat', 'P.Value', 'adj.P.Val')
+
+circ = circle_dat(goplot_dat, res_vch) # zscore = up-down/square root the gene count
+GOBar(subset(circ, category == 'BP'))
+#pdf ('~/Documents/vibrio_etec/nature_metabolism_am01/supp_material/GOcircle_vch_vs_vch_e36.pdf', height = 10, width = 15)
+GOCircle(circ)
+#dev.off()
+# GOCircle(circ, nsub = 10)
+#IDs <- c('GO:0007507', 'GO:0001568', 'GO:0001944', 'GO:0048729', 'GO:0048514', 'GO:0005886', 'GO:0008092', 'GO:0008047')
+#GOCircle(circ, nsub = IDs)
+```
+
+```{r}
+# VCH vs VCH+e616 merged
+# counts merged at the FIGfam.ID level
+#VCH
+setwd('~/Documents/vibrio_etec/February_2017/bowtie_htseq/bowtie2_htseq_no_insert/')
+counts_vch_1 = read.delim ('vch_rep_1_counts', header = FALSE);colnames(counts_vch_1) = c('gene_id', 'vch_rep_1')
+counts_vch_2 = read.delim ('vch_rep_2_counts', header = FALSE);colnames(counts_vch_2) = c('gene_id', 'vch_rep_2')
+counts_vch_3 = read.delim ('vch_rep_3_counts', header = FALSE); colnames(counts_vch_3) = c('gene_id', 'vch_rep_3')
+counts_vch = merge (counts_vch_1, counts_vch_2, by = 'gene_id'); counts_vch = merge (counts_vch, counts_vch_3, by = 'gene_id')
+annotation_vch = read.delim ('../VCH_243277_158_PATRIC_genome_feature.txt', header = TRUE)
+# FIGfam.ID;PATRIC.genus.specific.families..PLfams.;PATRIC.cross.genus.families..PGfams.; Product
+colnames(counts_vch)[1] = c('PATRIC.ID'); annotation_vch = annotation_vch[annotation_vch$Feature.Type == 'CDS', ]
+dat_vch = merge (counts_vch, annotation_vch, by = 'PATRIC.ID', all = TRUE)
+#keep = c('PATRIC.ID', 'vch_rep_1', 'vch_rep_2', 'vch_rep_3', 'FIGfam.ID', 'Product')
+keep = c('vch_rep_1', 'vch_rep_2', 'vch_rep_3', 'FIGfam.ID')
+dat_vch = dat_vch[, colnames(dat_vch) %in% keep]; dat_vch = na.omit(dat_vch);dat_vch = dat_vch[!dat_vch$FIGfam.ID == "", ]
+#dat_vch = dat_vch[rowSums(dat_vch[, 1:3]) > 5, ]
+
+
+# VCH+e616
+setwd('~/Documents/vibrio_etec/February_2017/bowtie_htseq/bowtie2_htseq_no_insert/')
+counts_vch_e616_1 = read.delim ('vch_and_e616_merged_rep_1_counts', header = FALSE);colnames(counts_vch_e616_1) = c('gene_id', 'vch_e616_rep_1')
+counts_vch_e616_2 = read.delim ('vch_and_e616_merged_rep_2_counts', header = FALSE);colnames(counts_vch_e616_2) = c('gene_id', 'vch_e616_rep_2')
+counts_vch_e616_3 = read.delim ('vch_and_e616_merged_rep_3_counts', header = FALSE);colnames(counts_vch_e616_3) = c('gene_id', 'vch_e616_rep_3')
+counts_vch_e616 = merge (counts_vch_e616_1, counts_vch_e616_2, by = 'gene_id'); counts_vch_e616 = merge (counts_vch_e616, counts_vch_e616_3, by = 'gene_id');
+annotation_vch_e616 = read.delim ('../merged_VCH_E616_gamma_proteobacteria_PATRIC_genome_feature.txt', header = TRUE);
+# FIGfam.ID;PATRIC.genus.specific.families..PLfams.;PATRIC.cross.genus.families..PGfams.; Product
+colnames(counts_vch_e616)[1] = c('PATRIC.ID'); annotation_vch_e616 = annotation_vch_e616[annotation_vch_e616$Feature.Type == 'CDS', ]
+dat_vch_e616 = merge (counts_vch_e616, annotation_vch_e616, by = 'PATRIC.ID', all = TRUE)
+#keep = c('PATRIC.ID', 'vch_rep_1', 'vch_rep_2', 'vch_rep_3', 'FIGfam.ID', 'Product')
+keep = c('vch_e616_rep_1', 'vch_e616_rep_2', 'vch_e616_rep_3', 'FIGfam.ID')
+dat_vch_e616 = dat_vch_e616[, colnames(dat_vch_e616) %in% keep]; dat_vch_e616 = na.omit(dat_vch_e616); dat_vch_e616 = dat_vch_e616[!dat_vch_e616$FIGfam.ID == "", ]
+#dat_vch_e36 = dat_vch_e36[rowSums(dat_vch_e36[, 1:3]) > 5, ]
+
+# merge counts from the two conditions
+df = NULL; df = merge (dat_vch, dat_vch_e616, by = 'FIGfam.ID'); df[is.na(df)] <- 0;
+library (data.table)
+adf = NULL;
+df = cbind (df, row_sums= rowSums(df[,2:7]))
+adf = as.data.table(df)
+df = setDT(adf)[, .SD[which.max(row_sums)], by=FIGfam.ID]; df = df[,-8]
+# for transcripts for which there are double hits, take the one with higher percent identity and lower evalue and lower number of gaps -- in most cases these mapped to the same symbol -- so its safe to just discard duplicates
+
+vch_vs_vch_e616_counts = df;
+df = NULL; df = data.frame(vch_vs_vch_e616_counts)
+rownames(df) = df[, 1]; df = df[,-1]; df[is.na(df)] <- 0;
+counts_table = df;
+exp_design = data.frame(row.names = colnames(counts_table), condition = c(rep ('monoculture', 3), rep ('coculture', 3)))
+conds = exp_design$condition
+library(DESeq2)
+ddsFullCountTable <- DESeqDataSetFromMatrix(countData = counts_table, colData = exp_design, design = ~condition)
+dds = NULL; dds = ddsFullCountTable
+dds$condition = relevel (dds$condition, ref = 'coculture')
+# estimates size factors to account for differences in sequencing depth
+dds <- estimateSizeFactors( dds )
+sizeFactors(dds)
+#counts_table = dat
+
+plotPCA (rld, intgroup = 'condition')
+# sample-to-sample distance
+sampleDists = dist(t(assay(rld)), method = "maximum")
+
+sampleDistMatrix = as.matrix(sampleDists)
+#rownames(sampleDistMatrix) = paste(rld$condition)
+#colnames (sampleDistMatrix) = NULL
+colors = colorRampPalette(rev(brewer.pal(9, 'Blues'))) (255)
+pheatmap(sampleDistMatrix, clustering_distance_rows = sampleDists, clustering_distance_cols = sampleDists, col = colors, clustering_method = 'average')
+ddsFullCountTable <- DESeqDataSetFromMatrix(countData = counts_table, colData = exp_design, design = ~ condition)
+dds = ddsFullCountTable
+colData(dds)$condition <- relevel(colData(dds)$condition, "coculture")
+levels(colData(dds)$monoculture)
+
+dds = dds[rowSums(counts(dds)) > 1, ]
+design(dds) <- ~ condition
+dds <- DESeq( dds )
+res_vch = NULL;
+res_vch <- results( dds , contrast = c('condition', 'monoculture', 'coculture'))
+summary(res_vch, na.rm = TRUE)
+sum(!is.na(res_vch$padj))
+
+plotMA(res_vch, main = 'DESeq2', ylim = c(-2,2))
+
+#pdf ('~/Documents/Projects_macbook/Vibrio-ETEC/February_2017/manuscript_draft_August_2017/dual_rnaseq/vch_vs_vch_e36.pdf')
+plotPCA (rld, intgroup = 'condition')
+plotMA(res_vch, main = 'DESeq2', ylim = c(-2,2))
+pheatmap(sampleDistMatrix, clustering_distance_rows = sampleDists, clustering_distance_cols = sampleDists, col = colors, annotation_col = exp_design)
+#dev.off()
+
+# merge DEG results and annotation, functional annotation results in one table for export
+# res + PATRIC annotation
+res_vch = data.frame(res_vch); res_vch = cbind (rownames(res_vch), res_vch); rownames(res_vch) = NULL; colnames(res_vch)[1] = c('FIGfam.ID'); res_vch = data.frame(res_vch); deg_VCH_vs_VCH_co_cultured_with_e616  = merge (res_vch, annotation_vch, by = 'FIGfam.ID');
+# res + PATRIC annotation + eggNOG annotation
+eggNOG_vch = NULL; eggNOG_vch = read.delim ('~/Documents/vibrio_etec/February_2017/bowtie_htseq/eggNOG_priotrize_precision_diamond/VCH_243277_158_ptns.fasta.emapper.annotations', header = FALSE, stringsAsFactors = FALSE); colnames(eggNOG_vch) = c('PATRIC.ID', 'seed_ortholog', 'blast_evalue', 'eggNOG_score', 'eggNOG_predicted_name', 'GO_terms', 'KEGG_pw', 'tax_scope', 'eggNOG_OGs', 'best_OG', 'COG_category', 'eggNOG_HMM_description')
+deg_VCH_vs_VCH_co_cultured_with_e616 = merge (deg_VCH_vs_VCH_co_cultured_with_e616, eggNOG_vch, by = 'PATRIC.ID')
+
+remove = c('Feature.ID', 'RefSeq.Locus.Tag', 'Alt.Locus.Tag', 'Accession', 'Protein.ID', 'Gene.Symbol', 'COG_category', 'eggNOG_HMM_description', 'best_OG');deg_VCH_vs_VCH_co_cultured_with_e616 = deg_VCH_vs_VCH_co_cultured_with_e616[, !colnames(deg_VCH_vs_VCH_co_cultured_with_e616) %in% remove];
+#write.table (deg_VCH_vs_VCH_co_cultured_with_e616, file = '~/Documents/vibrio_etec/nature_metabolism_am01/supp_material/vch_vs_vch_e616.txt', sep = '\t', quote = FALSE, row.names = FALSE)
+
+# checks
+up_monoculture_vs_coculture = deg_VCH_vs_VCH_co_cultured_with_e616[deg_VCH_vs_VCH_co_cultured_with_e616$padj < 0.1 & deg_VCH_vs_VCH_co_cultured_with_e616$log2FoldChange >1, ]; length (unique(na.omit(up_monoculture_vs_coculture$FIGfam.ID)))
+down_monoculture_vs_coculture = deg_VCH_vs_VCH_co_cultured_with_e616[deg_VCH_vs_VCH_co_cultured_with_e616$padj < 0.1 & deg_VCH_vs_VCH_co_cultured_with_e616$log2FoldChange < -1, ]; length (unique(na.omit(down_monoculture_vs_coculture$FIGfam.ID)))
+deg_genes = rbind (up_monoculture_vs_coculture, down_monoculture_vs_coculture)
+
+# for heatmap
+deg = rbind (up_monoculture_vs_coculture, down_monoculture_vs_coculture)
+keep = c('Product', 'FIGfam.ID')
+deg = deg[, keep]
+df = assay (rld)
+df = df[deg$FIGfam.ID, ]; df = na.omit(df) # 711 6
+#pdf('~/Documents/Projects_macbook/Vibrio-ETEC/February_2017/manuscript_draft_August_2017/dual_rnaseq/deg_heatmap.pdf')
+pheatmap (df, annotation_col = exp_design)
+#dev.off()
+```
+
+```{r}
+# GO enrichment -- this chunk was done on my workstation because the summary (Over) from topGO/GOstats is incompatible with the version of R on my macbook
+# http://www.bioconductor.org/packages/release/bioc/vignettes/GOstats/inst/doc/GOstatsForUnsupportedOrganisms.pdf
+# VCH, VCH+E616
+# my workstation
+dat = deg_VCH_vs_VCH_co_cultured_with_e616; dat = dat[, c('FIGfam.ID', 'GO_terms')]; dat = dat[!dat$GO_terms == "", ]
+go_vch = dat %>%
+    mutate(GO_terms = strsplit(as.character(GO_terms), "\\,")) %>%
+    unnest(GO_terms)
+# prepare input for GOstats
+# frame.go_id frame.Evidence frame.gene_id
+go_vch = cbind (go_vch, frame.Evidence = rep ('IEA', length (go_vch$FIGfam.ID)))
+goframeData = NULL; goframeData = cbind (go_vch$GO_terms, as.character(go_vch$frame.Evidence)); goframeData = cbind (goframeData, as.character(go_vch$FIGfam.ID)); colnames(goframeData) = c('frame.go_id', 'frame.Evidence', 'frame.gene_id'); goframeData = data.frame(goframeData)
+goFrame=GOFrame(goframeData,organism="Vibrio cholerae")
+goAllFrame=GOAllFrame(goFrame)
+
+gsc <- GeneSetCollection(goAllFrame, setType = GOCollection())
+
+# perform GSEA
+# universe = goframeData$frame.gene_id;universe = as.character(universe)
+universe = as.character(unique (deg_VCH_vs_VCH_co_cultured_with_e616$FIGfam.ID))
+deg_genes = union (up_monoculture_vs_coculture$FIGfam.ID, down_monoculture_vs_coculture$FIGfam.ID)
+genes = unique(deg_genes); genes = as.character(genes)
+
+params <- GSEAGOHyperGParams(name="My Custom GSEA based annot Params",
+                              geneSetCollection=gsc,
+                              geneIds = genes,
+                              universeGeneIds = universe,
+                              ontology = "BP",
+                              pvalueCutoff = 0.1,
+                              conditional = FALSE,
+                              testDirection = "over")
+Over <- hyperGTest(params)
+summary(Over)
+```
+```{r}
+# use GOplot
+df1 = do.call(rbind, geneIdsByCategory(Over))
+df1 = ldply(apply(df1, 1, function(x) data.frame(
+                      x = paste(x[1:298],sep=",",collapse=",")))) # dim(df1)[2] = 274
+colnames(df1) = c('GOBPID', 'Genes');
+df2 = summary(Over)
+dat = NULL; dat = merge (df1, df2)
+dat = cbind (dat, Category = rep ('BP', length (dat$GOBPID)))
+colnames(dat)  [1] = 'ID'
+colnames(dat)[3] = 'adj_pval'; # this is not adjusted p value, not adjustment is made on GOstats p value output due to lack of independence between GO terms and gene expression values, controversial issue justified by using this as motivation for downstream analysis/to be validated by downstream analysis
+keep = c('Category', 'ID', 'Term', 'Genes', 'adj_pval');
+dat = dat[, keep]
+goplot_dat = dat; 
+goplot_dat = goplot_dat[order(goplot_dat$adj_pval, decreasing = FALSE), ]
+colnames(res_vch) = c('ID', 'baseMean', 'logFC', 'lfcSE', 'stat', 'P.Value', 'adj.P.Val')
+
+circ = circle_dat(goplot_dat, res_vch) # zscore = up-down/square root the gene count
+GOBar(subset(circ, category == 'BP'))
+GOCircle(circ)
+
+# GOCircle(circ, nsub = 10)
+#IDs <- c('GO:0007507', 'GO:0001568', 'GO:0001944', 'GO:0048729', 'GO:0048514', 'GO:0005886', 'GO:0008092', 'GO:0008047')
+#GOCircle(circ, nsub = IDs)
+```
+```{r}
+# E616 vs VCH+e616 merged
+# counts merged at the FIGfam.ID level
+rm (list = ls())
+setwd('~/Documents/vibrio_etec/February_2017/bowtie_htseq/bowtie2_htseq_no_insert/')
+counts_e616_1 = read.delim ('e616_rep_1_counts', header = FALSE);colnames(counts_e616_1) = c('gene_id', 'e616_rep_1')
+counts_e616_2 = read.delim ('e616_rep_2_counts', header = FALSE);colnames(counts_e616_2) = c('gene_id', 'e616_rep_2')
+counts_e616_3 = read.delim ('e616_rep_3_counts', header = FALSE); colnames(counts_e616_3) = c('gene_id', 'e616_rep_3')
+counts_e616 = merge (counts_e616_1, counts_e616_2, by = 'gene_id'); counts_e616 = merge (counts_e616, counts_e616_3, by = 'gene_id')
+annotation_e616 = read.delim ('../E616_316401_73_PATRIC_genome_feature.txt', header = TRUE)
+# FIGfam.ID;PATRIC.genus.specific.families..PLfams.;PATRIC.cross.genus.families..PGfams.; Product
+colnames(counts_e616)[1] = c('PATRIC.ID'); annotation_e616 = annotation_e616[annotation_e616$Feature.Type == 'CDS', ]
+dat_e616 = merge (counts_e616, annotation_e616, by = 'PATRIC.ID', all = TRUE)
+#keep = c('PATRIC.ID', 'vch_rep_1', 'vch_rep_2', 'vch_rep_3', 'FIGfam.ID', 'Product')
+keep = c('e616_rep_1', 'e616_rep_2', 'e616_rep_3', 'FIGfam.ID')
+dat_e616 = dat_e616[, colnames(dat_e616) %in% keep]; dat_e616 = na.omit(dat_e616);dat_e616 = dat_e616[!dat_e616$FIGfam.ID == "", ]
+
+# E616, E616+VCH
+setwd('~/Documents/vibrio_etec/February_2017/bowtie_htseq/bowtie2_htseq_no_insert/')
+counts_vch_e616_1 = read.delim ('vch_and_e616_merged_rep_1_counts', header = FALSE);colnames(counts_vch_e616_1) = c('gene_id', 'vch_e616_rep_1')
+counts_vch_e616_2 = read.delim ('vch_and_e616_merged_rep_2_counts', header = FALSE);colnames(counts_vch_e616_2) = c('gene_id', 'vch_e616_rep_2')
+counts_vch_e616_3 = read.delim ('vch_and_e616_merged_rep_3_counts', header = FALSE);colnames(counts_vch_e616_3) = c('gene_id', 'vch_e616_rep_3')
+counts_vch_e616 = merge (counts_vch_e616_1, counts_vch_e616_2, by = 'gene_id'); counts_vch_e616 = merge (counts_vch_e616, counts_vch_e616_3, by = 'gene_id');
+annotation_vch_e616 = read.delim ('../merged_VCH_E616_gamma_proteobacteria_PATRIC_genome_feature.txt', header = TRUE);
+# FIGfam.ID;PATRIC.genus.specific.families..PLfams.;PATRIC.cross.genus.families..PGfams.; Product
+colnames(counts_vch_e616)[1] = c('PATRIC.ID'); annotation_vch_e616 = annotation_vch_e616[annotation_vch_e616$Feature.Type == 'CDS', ]
+dat_vch_e616 = merge (counts_vch_e616, annotation_vch_e616, by = 'PATRIC.ID', all = TRUE)
+#keep = c('PATRIC.ID', 'vch_rep_1', 'vch_rep_2', 'vch_rep_3', 'FIGfam.ID', 'Product')
+keep = c('vch_e616_rep_1', 'vch_e616_rep_2', 'vch_e616_rep_3', 'FIGfam.ID')
+dat_vch_e616 = dat_vch_e616[, colnames(dat_vch_e616) %in% keep]; dat_vch_e616 = na.omit(dat_vch_e616); dat_vch_e616 = dat_vch_e616[!dat_vch_e616$FIGfam.ID == "", ]
+
+# merge counts from the two conditions
+df = NULL; df = merge (dat_e616, dat_vch_e616, by = 'FIGfam.ID'); df[is.na(df)] <- 0;
+library (data.table)
+adf = NULL;
+df = cbind (df, row_sums= rowSums(df[,2:7]))
+adf = as.data.table(df)
+df = setDT(adf)[, .SD[which.max(row_sums)], by=FIGfam.ID]; df = df[,-8]
+
+e616_vs_vch_e616_counts = df;
+df = NULL; df = data.frame(e616_vs_vch_e616_counts)
+rownames(df) = df[, 1]; df = df[,-1]; df[is.na(df)] <- 0;
+counts_table = df;
+exp_design = data.frame(row.names = colnames(counts_table), condition = c(rep ('monoculture', 3), rep ('coculture', 3)))
+conds = exp_design$condition
+library(DESeq2)
+ddsFullCountTable <- DESeqDataSetFromMatrix(countData = counts_table, colData = exp_design, design = ~condition)
+dds = NULL; dds = ddsFullCountTable
+dds$condition = relevel (dds$condition, ref = 'coculture')
+# estimates size factors to account for differences in sequencing depth
+dds <- estimateSizeFactors( dds )
+sizeFactors(dds)
+
+rld <- rlog( dds )
+plotPCA (rld, intgroup = 'condition')
+# sample-to-sample distance
+sampleDists = dist(t(assay(rld)), method = "maximum")
+sampleDistMatrix = as.matrix(sampleDists)
+colors = colorRampPalette(rev(brewer.pal(9, 'Blues'))) (255)
+
+pheatmap(sampleDistMatrix, clustering_distance_rows = sampleDists, clustering_distance_cols = sampleDists, col = colors, clustering_method = 'average')
+ddsFullCountTable <- DESeqDataSetFromMatrix(countData = counts_table, colData = exp_design, design = ~ condition)
+dds = ddsFullCountTable
+dds = dds[rowSums(counts(dds)) > 1, ]
+design(dds) <- ~ condition
+dds <- DESeq( dds )
+res_e616 = NULL;
+res_e616 <- results( dds , contrast = c('condition', 'monoculture', 'coculture'))
+summary(res_e616, na.rm = TRUE)
+sum(!is.na(res_e616$padj))
+
+plotMA(res_e616, main = 'DESeq2', ylim = c(-2,2))
+
+#pdf ('~/Documents/Projects_macbook/Vibrio-ETEC/February_2017/manuscript_draft_August_2017/dual_rnaseq/vch_vs_vch_e36.pdf')
+plotPCA (rld, intgroup = 'condition')
+plotMA(res_e616, main = 'DESeq2', ylim = c(-2,2))
+pheatmap(sampleDistMatrix, clustering_distance_rows = sampleDists, clustering_distance_cols = sampleDists, col = colors, annotation_col = exp_design)
+#dev.off()
+
+# merge DEG results and annotation, functional annotation results in one table for export
+# res + PATRIC annotation
+res_e616 = data.frame(res_e616); res_e616 = cbind (rownames(res_e616), res_e616); rownames(res_e616) = NULL; colnames(res_e616)[1] = c('FIGfam.ID'); res_e616 = data.frame(res_e616); deg_E616_vs_VCH_co_cultured_with_E616  = merge (res_e616, annotation_e616, by = 'FIGfam.ID');
+# res + PATRIC annotation + eggNOG annotation
+eggNOG_e616 = NULL; eggNOG_e616 = read.delim ('~/Documents/vibrio_etec/February_2017/bowtie_htseq/eggNOG_priotrize_precision_diamond/E616_316401_73_ptn.fasta.emapper.annotations', header = FALSE, stringsAsFactors = FALSE); colnames(eggNOG_e616) = c('PATRIC.ID', 'seed_ortholog', 'blast_evalue', 'eggNOG_score', 'eggNOG_predicted_name', 'GO_terms', 'KEGG_pw', 'tax_scope', 'eggNOG_OGs', 'best_OG', 'COG_category', 'eggNOG_HMM_description')
+deg_E616_vs_VCH_co_cultured_with_E616 = merge (deg_E616_vs_VCH_co_cultured_with_E616, eggNOG_e616, by = 'PATRIC.ID')
+
+remove = c('Feature.ID', 'RefSeq.Locus.Tag', 'Alt.Locus.Tag', 'Accession', 'Protein.ID', 'Gene.Symbol', 'COG_category', 'eggNOG_HMM_description', 'best_OG');deg_E616_vs_VCH_co_cultured_with_E616 = deg_E616_vs_VCH_co_cultured_with_E616[, !colnames(deg_E616_vs_VCH_co_cultured_with_E616) %in% remove];
+# checks
+up_monoculture_vs_coculture = deg_E616_vs_VCH_co_cultured_with_E616[deg_E616_vs_VCH_co_cultured_with_E616$padj < 0.1 & deg_E616_vs_VCH_co_cultured_with_E616$log2FoldChange >1, ]; length (unique(na.omit(up_monoculture_vs_coculture$FIGfam.ID)))
+down_monoculture_vs_coculture = deg_E616_vs_VCH_co_cultured_with_E616[deg_E616_vs_VCH_co_cultured_with_E616$padj < 0.1 & deg_E616_vs_VCH_co_cultured_with_E616$log2FoldChange < -1, ]; length (unique(na.omit(down_monoculture_vs_coculture$FIGfam.ID)))
+deg_genes = rbind (up_monoculture_vs_coculture, down_monoculture_vs_coculture)
+
+# for heatmap
+deg = rbind (up_monoculture_vs_coculture, down_monoculture_vs_coculture)
+keep = c('Product', 'FIGfam.ID')
+deg = deg[, keep]
+df = assay (rld)
+df = df[deg$FIGfam.ID, ]; df = na.omit(df) # 711 6
+#pdf('~/Documents/Projects_macbook/Vibrio-ETEC/February_2017/manuscript_draft_August_2017/dual_rnaseq/deg_heatmap.pdf')
+pheatmap (df, annotation_col = exp_design)
+#dev.off()
+```
+
+```{r}
+# GO enrichment -- this chunk was done on my workstation because the summary (Over) from topGO/GOstats is incompatible with the version of R on my macbook
+# http://www.bioconductor.org/packages/release/bioc/vignettes/GOstats/inst/doc/GOstatsForUnsupportedOrganisms.pdf
+
+# E616, E616+VCH
+# my workstation
+dat = deg_E616_vs_VCH_co_cultured_with_E616; dat = dat[, c('FIGfam.ID', 'GO_terms')]; dat = dat[!dat$GO_terms == "", ]
+go_e616 = dat %>%
+    mutate(GO_terms = strsplit(as.character(GO_terms), "\\,")) %>%
+    unnest(GO_terms)
+# prepare input for GOstats
+# frame.go_id frame.Evidence frame.gene_id
+go_e616 = cbind (go_e616, frame.Evidence = rep ('IEA', length (go_e616$FIGfam.ID)))
+goframeData = NULL; goframeData = cbind (go_e616$GO_terms, as.character(go_e616$frame.Evidence)); goframeData = cbind (goframeData, as.character(go_e616$FIGfam.ID)); colnames(goframeData) = c('frame.go_id', 'frame.Evidence', 'frame.gene_id'); goframeData = data.frame(goframeData)
+goFrame=GOFrame(goframeData,organism="Vibrio cholerae")
+goAllFrame=GOAllFrame(goFrame)
+library("GSEABase")
+gsc <- GeneSetCollection(goAllFrame, setType = GOCollection())
+
+# perform GSEA
+# universe = goframeData$frame.gene_id;universe = as.character(universe)
+universe = as.character(unique (deg_E616_vs_VCH_co_cultured_with_E616$FIGfam.ID))
+deg_genes = union (up_monoculture_vs_coculture$FIGfam.ID, down_monoculture_vs_coculture$FIGfam.ID)
+genes = unique(deg_genes); genes = as.character(genes)
+
+params <- GSEAGOHyperGParams(name="My Custom GSEA based annot Params",
+                              geneSetCollection=gsc,
+                              geneIds = genes,
+                              universeGeneIds = universe,
+                              ontology = "BP",
+                              pvalueCutoff = 0.1,
+                              conditional = FALSE,
+                              testDirection = "over")
+Over <- hyperGTest(params)
+summary(Over)
+```
+
+```{r}
+# use GOplot
+df1 = do.call(rbind, geneIdsByCategory(Over))
+df1 = ldply(apply(df1, 1, function(x) data.frame(
+                      x = paste(x[1:660],sep=",",collapse=",")))) # dim(df1)[2] = 274
+colnames(df1) = c('GOBPID', 'Genes');
+df2 = summary(Over)
+dat = NULL; dat = merge (df1, df2)
+dat = cbind (dat, Category = rep ('BP', length (dat$GOBPID)))
+colnames(dat)  [1] = 'ID'
+colnames(dat)[3] = 'adj_pval'; # this is not adjusted p value, not adjustment is made on GOstats p value output due to lack of independence between GO terms and gene expression values, controversial issue justified by using this as motivation for downstream analysis/to be validated by downstream analysis
+keep = c('Category', 'ID', 'Term', 'Genes', 'adj_pval');
+dat = dat[, keep]
+goplot_dat = dat; 
+goplot_dat = goplot_dat[order(goplot_dat$adj_pval, decreasing = FALSE), ]
+colnames(res_e616) = c('ID', 'baseMean', 'logFC', 'lfcSE', 'stat', 'P.Value', 'adj.P.Val')
+
+circ = circle_dat(goplot_dat, res_e616) # zscore = up-down/square root the gene count
+GOBar(subset(circ, category == 'BP'))
+GOCircle(circ)
+# GOCircle(circ, nsub = 10)
+#IDs <- c('GO:0007507', 'GO:0001568', 'GO:0001944', 'GO:0048729', 'GO:0048514', 'GO:0005886', 'GO:0008092', 'GO:0008047')
+#GOCircle(circ, nsub = IDs)
+```
+
+```{r}
+# E36 vs VCH+e36 merged
+# counts merged at the FIGfam.ID level
+rm (list = ls())
+setwd('~/Documents/vibrio_etec/February_2017/bowtie_htseq/bowtie2_htseq_no_insert/')
+counts_e36_1 = read.delim ('e36_rep_1_counts', header = FALSE);colnames(counts_e36_1) = c('gene_id', 'e36_rep_1')
+counts_e36_2 = read.delim ('e36_rep_2_counts', header = FALSE);colnames(counts_e36_2) = c('gene_id', 'e36_rep_2')
+counts_e36_3 = read.delim ('e36_rep_3_counts', header = FALSE); colnames(counts_e36_3) = c('gene_id', 'e36_rep_3')
+counts_e36 = merge (counts_e36_1, counts_e36_2, by = 'gene_id'); counts_e36 = merge (counts_e36, counts_e36_3, by = 'gene_id')
+annotation_e36 = read.delim ('../E36_316401_72_PATRIC_genome_feature.txt', header = TRUE)
+# FIGfam.ID;PATRIC.genus.specific.families..PLfams.;PATRIC.cross.genus.families..PGfams.; Product
+colnames(counts_e36)[1] = c('PATRIC.ID'); annotation_e36 = annotation_e36[annotation_e36$Feature.Type == 'CDS', ]
+dat_e36 = merge (counts_e36, annotation_e36, by = 'PATRIC.ID', all = TRUE)
+#keep = c('PATRIC.ID', 'vch_rep_1', 'vch_rep_2', 'vch_rep_3', 'FIGfam.ID', 'Product')
+keep = c('e36_rep_1', 'e36_rep_2', 'e36_rep_3', 'FIGfam.ID')
+dat_e36 = dat_e36[, colnames(dat_e36) %in% keep]; dat_e36 = na.omit(dat_e36);dat_e36 = dat_e36[!dat_e36$FIGfam.ID == "", ]
+
+
+# VCH+e36
+counts_vch_e36_1 = read.delim ('vch_and_e36_merged_rep_1_counts', header = FALSE);colnames(counts_vch_e36_1) = c('gene_id', 'vch_e36_rep_1')
+counts_vch_e36_2 = read.delim ('vch_and_e36_merged_rep_2_counts', header = FALSE);colnames(counts_vch_e36_2) = c('gene_id', 'vch_e36_rep_2')
+counts_vch_e36_3 = read.delim ('vch_and_e36_merged_rep_3_counts', header = FALSE);colnames(counts_vch_e36_3) = c('gene_id', 'vch_e36_rep_3')
+counts_vch_e36 = merge (counts_vch_e36_1, counts_vch_e36_2, by = 'gene_id'); counts_vch_e36 = merge (counts_vch_e36, counts_vch_e36_3, by = 'gene_id');
+annotation_vch_e36 = read.delim ('../merged_VCH_E36_gamma_proteobacteria_PATRIC_genome_feature.txt', header = TRUE);
+# FIGfam.ID;PATRIC.genus.specific.families..PLfams.;PATRIC.cross.genus.families..PGfams.; Product
+colnames(counts_vch_e36)[1] = c('PATRIC.ID'); annotation_vch_e36 = annotation_vch_e36[annotation_vch_e36$Feature.Type == 'CDS', ]
+dat_vch_e36 = merge (counts_vch_e36, annotation_vch_e36, by = 'PATRIC.ID', all = TRUE)
+#keep = c('PATRIC.ID', 'vch_rep_1', 'vch_rep_2', 'vch_rep_3', 'FIGfam.ID', 'Product')
+keep = c('vch_e36_rep_1', 'vch_e36_rep_2', 'vch_e36_rep_3', 'FIGfam.ID')
+dat_vch_e36 = dat_vch_e36[, colnames(dat_vch_e36) %in% keep]; dat_vch_e36 = na.omit(dat_vch_e36); dat_vch_e36 = dat_vch_e36[!dat_vch_e36$FIGfam.ID == "", ]
+
+# merge counts from the two conditions
+df = NULL; df = merge (dat_e36, dat_vch_e36, by = 'FIGfam.ID'); df[is.na(df)] <- 0;
+adf = NULL;
+df = cbind (df, row_sums= rowSums(df[,2:7]))
+adf = as.data.table(df)
+df = setDT(adf)[, .SD[which.max(row_sums)], by=FIGfam.ID]; df = df[,-8]
+
+e36_vs_vch_e36_counts = df;
+df = NULL; df = data.frame(e36_vs_vch_e36_counts)
+rownames(df) = df[, 1]; df = df[,-1]; df[is.na(df)] <- 0;
+counts_table = df;
+exp_design = data.frame(row.names = colnames(counts_table), condition = c(rep ('monoculture', 3), rep ('coculture', 3)))
+conds = exp_design$condition
+ddsFullCountTable <- DESeqDataSetFromMatrix(countData = counts_table, colData = exp_design, design = ~condition)
+dds = NULL; dds = ddsFullCountTable
+dds$condition = relevel (dds$condition, ref = 'coculture')
+# estimates size factors to account for differences in sequencing depth
+dds <- estimateSizeFactors( dds )
+sizeFactors(dds)
+
+
+rld <- rlog( dds )
+# PCA
+
+plotPCA (rld, intgroup = 'condition')
+# sample-to-sample distance
+sampleDists = dist(t(assay(rld)), method = "maximum")
+sampleDistMatrix = as.matrix(sampleDists)
+#rownames(sampleDistMatrix) = paste(rld$condition)
+#colnames (sampleDistMatrix) = NULL
+colors = colorRampPalette(rev(brewer.pal(9, 'Blues'))) (255)
+pheatmap(sampleDistMatrix, clustering_distance_rows = sampleDists, clustering_distance_cols = sampleDists, col = colors, clustering_method = 'average')
+ddsFullCountTable <- DESeqDataSetFromMatrix(countData = counts_table, colData = exp_design, design = ~ condition)
+dds = ddsFullCountTable
+dds = dds[rowSums(counts(dds)) > 1, ]
+design(dds) <- ~ condition
+dds <- DESeq( dds )
+res_e36 = NULL;
+res_e36 <- results( dds , contrast = c('condition', 'monoculture', 'coculture'))
+summary(res_e36, na.rm = TRUE)
+sum(!is.na(res_e36$padj))
+
+
+plotMA(res_e36, main = 'DESeq2', ylim = c(-2,2))
+
+#pdf ('~/Documents/Projects_macbook/Vibrio-ETEC/February_2017/manuscript_draft_August_2017/dual_rnaseq/vch_vs_vch_e36.pdf')
+plotPCA (rld, intgroup = 'condition')
+plotMA(res_e36, main = 'DESeq2', ylim = c(-2,2))
+pheatmap(sampleDistMatrix, clustering_distance_rows = sampleDists, clustering_distance_cols = sampleDists, col = colors, annotation_col = exp_design)
+#dev.off()
+
+# merge DEG results and annotation, functional annotation results in one table for export
+# res + PATRIC annotation
+res_e36 = data.frame(res_e36); res_e36 = cbind (rownames(res_e36), res_e36); rownames(res_e36) = NULL; colnames(res_e36)[1] = c('FIGfam.ID'); res_e36 = data.frame(res_e36); deg_E36_vs_VCH_co_cultured_with_E36  = merge (res_e36, annotation_e36, by = 'FIGfam.ID');
+# res + PATRIC annotation + eggNOG annotation
+eggNOG_e36 = NULL; eggNOG_e36 = read.delim ('~/Documents/vibrio_etec/February_2017/bowtie_htseq/eggNOG_priotrize_precision_diamond/E36_316401_72_ptn.fasta.emapper.annotations', header = FALSE, stringsAsFactors = FALSE); colnames(eggNOG_e36) = c('PATRIC.ID', 'seed_ortholog', 'blast_evalue', 'eggNOG_score', 'eggNOG_predicted_name', 'GO_terms', 'KEGG_pw', 'tax_scope', 'eggNOG_OGs', 'best_OG', 'COG_category', 'eggNOG_HMM_description')
+deg_E36_vs_VCH_co_cultured_with_E36 = merge (deg_E36_vs_VCH_co_cultured_with_E36, eggNOG_e36, by = 'PATRIC.ID')
+
+remove = c('Feature.ID', 'RefSeq.Locus.Tag', 'Alt.Locus.Tag', 'Accession', 'Protein.ID', 'Gene.Symbol', 'COG_category', 'eggNOG_HMM_description', 'best_OG');deg_E36_vs_VCH_co_cultured_with_E36 = deg_E36_vs_VCH_co_cultured_with_E36[, !colnames(deg_E36_vs_VCH_co_cultured_with_E36) %in% remove];
+
+# checks
+up_monoculture_vs_coculture = deg_E36_vs_VCH_co_cultured_with_E36[deg_E36_vs_VCH_co_cultured_with_E36$padj < 0.1 & deg_E36_vs_VCH_co_cultured_with_E36$log2FoldChange >1, ]; length (unique(na.omit(up_monoculture_vs_coculture$FIGfam.ID)))
+down_monoculture_vs_coculture = deg_E36_vs_VCH_co_cultured_with_E36[deg_E36_vs_VCH_co_cultured_with_E36$padj < 0.1 & deg_E36_vs_VCH_co_cultured_with_E36$log2FoldChange < -1, ]; length (unique(na.omit(down_monoculture_vs_coculture$FIGfam.ID)))
+deg_genes = rbind (up_monoculture_vs_coculture, down_monoculture_vs_coculture)
+
+
+# for heatmap
+deg = rbind (up_monoculture_vs_coculture, down_monoculture_vs_coculture)
+keep = c('Product', 'FIGfam.ID')
+deg = deg[, keep]
+df = assay (rld)
+df = df[deg$FIGfam.ID, ]; df = na.omit(df) # 711 6
+#pdf('~/Documents/Projects_macbook/Vibrio-ETEC/February_2017/manuscript_draft_August_2017/dual_rnaseq/deg_heatmap.pdf')
+pheatmap (df, annotation_col = exp_design)
+#dev.off()
+```
+```{r}
+# GO enrichment -- this chunk was done on my workstation because the summary (Over) from topGO/GOstats is incompatible with the version of R on my macbook
+# http://www.bioconductor.org/packages/release/bioc/vignettes/GOstats/inst/doc/GOstatsForUnsupportedOrganisms.pdf
+
+# E36, E36+VCH
+# my workstation
+dat = deg_E36_vs_VCH_co_cultured_with_E36; dat = dat[, c('FIGfam.ID', 'GO_terms')]; dat = dat[!dat$GO_terms == "", ]
+go_e36 = dat %>%
+    mutate(GO_terms = strsplit(as.character(GO_terms), "\\,")) %>%
+    unnest(GO_terms)
+# prepare input for GOstats
+# frame.go_id frame.Evidence frame.gene_id
+go_e36 = cbind (go_e36, frame.Evidence = rep ('IEA', length (go_e36$FIGfam.ID)))
+goframeData = NULL; goframeData = cbind (go_e36$GO_terms, as.character(go_e36$frame.Evidence)); goframeData = cbind (goframeData, as.character(go_e36$FIGfam.ID)); colnames(goframeData) = c('frame.go_id', 'frame.Evidence', 'frame.gene_id'); goframeData = data.frame(goframeData)
+goFrame=GOFrame(goframeData,organism="Vibrio cholerae")
+goAllFrame=GOAllFrame(goFrame)
+library("GSEABase")
+gsc <- GeneSetCollection(goAllFrame, setType = GOCollection())
+
+# perform GSEA
+# universe = goframeData$frame.gene_id;universe = as.character(universe)
+universe = as.character(unique (deg_E36_vs_VCH_co_cultured_with_E36$FIGfam.ID))
+deg_genes = union (up_monoculture_vs_coculture$FIGfam.ID, down_monoculture_vs_coculture$FIGfam.ID)
+genes = unique(deg_genes); genes = as.character(genes)
+
+params <- GSEAGOHyperGParams(name="My Custom GSEA based annot Params",
+                              geneSetCollection=gsc,
+                              geneIds = genes,
+                              universeGeneIds = universe,
+                              ontology = "BP",
+                              pvalueCutoff = 0.1,
+                              conditional = FALSE,
+                              testDirection = "over")
+Over <- hyperGTest(params)
+summary(Over)
+```
+
+```{r}
+# use GOplot
+df1 = do.call(rbind, geneIdsByCategory(Over))
+
+df1 = ldply(apply(df1, 1, function(x) data.frame(
+                      x = paste(x[1:184],sep=",",collapse=",")))) # dim(df1)[2] = 274
+colnames(df1) = c('GOBPID', 'Genes');
+df2 = summary(Over)
+dat = NULL; dat = merge (df1, df2)
+dat = cbind (dat, Category = rep ('BP', length (dat$GOBPID)))
+colnames(dat)  [1] = 'ID'
+colnames(dat)[3] = 'adj_pval'; # this is not adjusted p value, not adjustment is made on GOstats p value output due to lack of independence between GO terms and gene expression values, controversial issue justified by using this as motivation for downstream analysis/to be validated by downstream analysis
+keep = c('Category', 'ID', 'Term', 'Genes', 'adj_pval');
+dat = dat[, keep]
+goplot_dat = dat; 
+goplot_dat = goplot_dat[order(goplot_dat$adj_pval, decreasing = FALSE), ]
+colnames(res_e36) = c('ID', 'baseMean', 'logFC', 'lfcSE', 'stat', 'P.Value', 'adj.P.Val')
+
+circ = circle_dat(goplot_dat, res_e36) # zscore = up-down/square root the gene count
+GOBar(subset(circ, category == 'BP'))
+GOCircle(circ)
+# GOCircle(circ, nsub = 10)
+#IDs <- c('GO:0007507', 'GO:0001568', 'GO:0001944', 'GO:0048729', 'GO:0048514', 'GO:0005886', 'GO:0008092', 'GO:0008047')
+#GOCircle(circ, nsub = IDs)
+```
